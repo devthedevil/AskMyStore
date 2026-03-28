@@ -284,7 +284,7 @@ single-agent-rag-application/
 ### 1. Clone & Setup
 
 ```bash
-cd "single agent rag application"
+cd "AskMyStore"
 ```
 
 ### 2. Configure API Key
