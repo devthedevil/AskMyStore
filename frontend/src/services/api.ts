@@ -1,13 +1,5 @@
 import axios from "axios";
-import type {
-  Product,
-  Order,
-  DashboardSummary,
-  ChatResponse,
-  Category,
-  Review,
-  ReviewCreate,
-} from "../types";
+import type { Product, Order, DashboardSummary, ChatResponse, Category } from "../types";
 
 const api = axios.create({
   baseURL: "/api",
@@ -40,22 +32,5 @@ export async function getDashboard(): Promise<DashboardSummary> {
 
 export async function sendChatMessage(query: string): Promise<ChatResponse> {
   const { data } = await api.post("/chat/", { query });
-  return data;
-}
-
-// ── Reviews ──────────────────────────────────────────────────────────────────
-
-export async function getProductReviews(productId: number): Promise<Review[]> {
-  const { data } = await api.get(`/reviews/?product_id=${productId}`);
-  return data;
-}
-
-export async function getOrderReviews(orderId: number): Promise<Review[]> {
-  const { data } = await api.get(`/reviews/?order_id=${orderId}`);
-  return data;
-}
-
-export async function submitReview(payload: ReviewCreate): Promise<Review> {
-  const { data } = await api.post("/reviews/", payload);
   return data;
 }

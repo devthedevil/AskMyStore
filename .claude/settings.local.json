@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(pip install:*)",
+      "Bash(python -c \":*)",
+      "Bash(curl -s http://localhost:8000/api/dashboard/summary)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s http://localhost:8000/api/products/)",
+      "Bash(chmod +x \"/Users/devkumar/Documents/projects_resume/single agent rag application/start.sh\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat/ -H \"Content-Type: application/json\" -d '{\"\"query\"\": \"\"What is the total revenue and which product has the highest profit margin?\"\"}')",
+      "Bash(curl -s http://localhost:8000/api/categories/)"
+    ]
+  }
+}
