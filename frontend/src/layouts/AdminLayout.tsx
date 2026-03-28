@@ -1,0 +1,15 @@
+import { Outlet } from "react-router-dom";
+import Sidebar from "../components/Sidebar";
+import Chatbot from "../components/Chatbot";
+
+export default function AdminLayout() {
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <main className="flex-1 ml-64 p-8">
+        <Outlet />
+      </main>
+      <Chatbot />
+    </div>
+  );
+}

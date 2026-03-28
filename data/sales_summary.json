@@ -1,0 +1,14 @@
+[
+  { "month": "2025-04", "month_name": "April 2025", "total_revenue": 4540.83, "total_cost": 2485.47, "profit": 2055.36, "order_count": 8, "cancelled_orders": 1, "top_category": "Electronics", "avg_order_value": 567.60 },
+  { "month": "2025-05", "month_name": "May 2025", "total_revenue": 4233.82, "total_cost": 2310.50, "profit": 1923.32, "order_count": 9, "cancelled_orders": 1, "top_category": "Home & Kitchen", "avg_order_value": 470.42 },
+  { "month": "2025-06", "month_name": "June 2025", "total_revenue": 4270.83, "total_cost": 2345.20, "profit": 1925.63, "order_count": 9, "cancelled_orders": 1, "top_category": "Electronics", "avg_order_value": 474.54 },
+  { "month": "2025-07", "month_name": "July 2025", "total_revenue": 5185.80, "total_cost": 2830.15, "profit": 2355.65, "order_count": 10, "cancelled_orders": 0, "top_category": "Electronics", "avg_order_value": 518.58 },
+  { "month": "2025-08", "month_name": "August 2025", "total_revenue": 5127.88, "total_cost": 2785.40, "profit": 2342.48, "order_count": 9, "cancelled_orders": 1, "top_category": "Electronics", "avg_order_value": 569.76 },
+  { "month": "2025-09", "month_name": "September 2025", "total_revenue": 4463.78, "total_cost": 2420.85, "profit": 2042.93, "order_count": 9, "cancelled_orders": 1, "top_category": "Electronics", "avg_order_value": 495.98 },
+  { "month": "2025-10", "month_name": "October 2025", "total_revenue": 4687.81, "total_cost": 2560.30, "profit": 2127.51, "order_count": 9, "cancelled_orders": 1, "top_category": "Electronics", "avg_order_value": 520.87 },
+  { "month": "2025-11", "month_name": "November 2025", "total_revenue": 4636.82, "total_cost": 2510.45, "profit": 2126.37, "order_count": 9, "cancelled_orders": 0, "top_category": "Home & Kitchen", "avg_order_value": 515.20 },
+  { "month": "2025-12", "month_name": "December 2025", "total_revenue": 5856.76, "total_cost": 3150.80, "profit": 2705.96, "order_count": 9, "cancelled_orders": 1, "top_category": "Electronics", "avg_order_value": 650.75 },
+  { "month": "2026-01", "month_name": "January 2026", "total_revenue": 6233.81, "total_cost": 3385.60, "profit": 2848.21, "order_count": 9, "cancelled_orders": 1, "top_category": "Electronics", "avg_order_value": 692.65 },
+  { "month": "2026-02", "month_name": "February 2026", "total_revenue": 4689.82, "total_cost": 2545.75, "profit": 2144.07, "order_count": 9, "cancelled_orders": 0, "top_category": "Sports & Outdoors", "avg_order_value": 521.09 },
+  { "month": "2026-03", "month_name": "March 2026", "total_revenue": 10976.64, "total_cost": 5974.78, "profit": 5001.86, "order_count": 16, "cancelled_orders": 0, "top_category": "Electronics", "avg_order_value": 686.04 }
+]
