@@ -263,7 +263,7 @@ single-agent-rag-application/
 ### 1. Clone & Setup
 
 ```bash
-cd "single agent rag application"
+cd "AskMyStore"
 ```
 
 ### 2. Configure API Key
@@ -434,7 +434,7 @@ A question like "top 5 selling products" needs data from **all 115 orders**. But
 
 These summaries become their own cards, so **one card = one complete answer**.
 
-### Tech Stack in Plain English
+### Tech Stack
 
 | What | Tool | Why |
 |------|------|-----|
