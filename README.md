@@ -22,49 +22,102 @@ ShopRAG is a single-agent RAG system that:
 ### Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────────────────────────────────┐
-│   React Frontend │     │              FastAPI Backend                 │
-│                  │     │                                              │
-│  ┌────────────┐  │     │  ┌──────────┐   ┌───────────┐   ┌────────┐  │
-│  │ Dashboard   │  │────▶│  │ REST API │──▶│ RAG Engine│──▶│ Claude │  │
-│  │ Products    │  │     │  └──────────┘   │           │   │   AI   │  │
-│  │ Orders      │  │     │                 │ ┌───────┐ │   └────────┘  │
-│  │ Chatbot     │  │◀────│                 │ │ FAISS │ │               │
-│  └────────────┘  │     │                 │ │ Index │ │               │
-│                  │     │                 │ └───────┘ │               │
-└─────────────────┘     │                 └───────────┘               │
-                         │                      ▲                      │
-                         │               ┌──────┴──────┐               │
-                         │               │  JSON Data   │               │
-                         │               │  (products,  │               │
-                         │               │   orders,    │               │
-                         │               │   sales...)  │               │
-                         └───────────────┴──────────────┴──────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (React 19 + TypeScript)         │
+│                                                                 │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌─────────────┐  │
+│  │  Consumer Store  │  │  Admin Dashboard │  │  AI Chatbot │  │
+│  │  - Home          │  │  - KPI Cards     │  │  (floating) │  │
+│  │  - Shop/Catalog  │  │  - Sales Charts  │  │             │  │
+│  │  - Product Detail│  │  - Orders Table  │  │  Ask about: │  │
+│  │  - Cart/Checkout │  │  - Products Mgmt │  │  sales,     │  │
+│  └──────────────────┘  └──────────────────┘  │  inventory, │  │
+│                                               │  customers  │  │
+│                                               └─────────────┘  │
+└────────────────────────┬────────────────────────────────────────┘
+                         │  Axios HTTP
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      BACKEND (FastAPI + Python)                 │
+│                                                                 │
+│  GET /api/products     GET /api/orders     GET /api/dashboard   │
+│  GET /api/categories              POST /api/chat ←── RAG here  │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                    RAG PIPELINE                         │   │
+│  │                                                         │   │
+│  │  User Query                                             │   │
+│  │      │                                                  │   │
+│  │      ▼                                                  │   │
+│  │  [SentenceTransformer]  ──embed──▶  [FAISS Index]       │   │
+│  │  (all-MiniLM-L6-v2)                 top-10 chunks       │   │
+│  │                                          │              │   │
+│  │                                          ▼              │   │
+│  │                              [Claude AI (Anthropic)]    │   │
+│  │                              prompt = query + context   │   │
+│  │                                          │              │   │
+│  │                                          ▼              │   │
+│  │                              answer + source citations  │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        DATA LAYER (JSON)                        │
+│                                                                 │
+│  products.json (40)  orders.json (115)  customers.json (25)     │
+│  categories.json (8)                   sales_summary.json (12mo)│
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### RAG Pipeline
 
 ```
-User Query
-    │
-    ▼
-Embed query with SentenceTransformer (all-MiniLM-L6-v2)
-    │
-    ▼
-FAISS similarity search across 213 indexed chunks
-    │
-    ▼
-Retrieve top-8 most relevant data chunks
-    │
-    ▼
-Augment prompt with retrieved context
-    │
-    ▼
-Claude AI generates a data-driven answer
-    │
-    ▼
-Response with source citations
+                    "What were the top products this week?"
+                                     │
+                                     ▼
+                         ┌─────────────────────┐
+                         │  Embed with          │
+                         │  SentenceTransformer │  ──▶  384-dim vector
+                         └─────────────────────┘
+                                     │
+                                     ▼
+                         ┌─────────────────────┐
+                         │  FAISS Similarity   │
+                         │  Search             │  ──▶  Top 10 relevant chunks
+                         └─────────────────────┘          from 213 total
+                                     │
+                     ┌───────────────┼────────────────┐
+                     ▼               ▼                ▼
+               order chunks    sales chunks    product chunks
+                                     │
+                                     ▼
+                         ┌─────────────────────┐
+                         │  Claude API         │
+                         │  (context-grounded) │  ──▶  "Top 3 products were..."
+                         └─────────────────────┘       + [source] citations
 ```
+
+### FAISS Index Composition (213 chunks at startup)
+
+```
+  Products       ████████  40 chunks   (individual product details)
+  Orders         ███████████████████████  115 chunks  (order records)
+  Customers      █████  25 chunks      (customer profiles)
+  Sales Summary  ████  12 chunks       (monthly aggregations)
+  Pre-computed   ████  12 chunks       (top sellers, weekly breakdowns)
+  Categories     ██  8 chunks          (category aggregations)
+  Biz Summary    █  1 chunk            (overall business snapshot)
+```
+
+### Data Flow by Request Type
+
+| Request | Frontend → Backend → Response |
+|---|---|
+| Browse products | `GET /api/products` → products.json → `StoreProductCard` grid |
+| Admin KPIs | `GET /api/dashboard/summary` → computed from all JSON → charts |
+| Ask chatbot | `POST /api/chat` → FAISS search → Claude → answer + sources |
+| Filter orders | `GET /api/orders?status=shipped` → filtered JSON → table |
 
 ---
 
