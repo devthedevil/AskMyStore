@@ -57,3 +57,22 @@ def get_product_name(product_id: int) -> str:
         if prod["id"] == product_id:
             return prod["name"]
     return "Unknown"
+
+
+def get_reviews() -> list[dict]:
+    return load_json("reviews.json")
+
+
+def save_review(review: dict) -> dict:
+    """Append a new review to the in-memory cache and persist to disk."""
+    reviews = get_reviews()
+    new_id = max((r["id"] for r in reviews), default=0) + 1
+    review["id"] = new_id
+    reviews.append(review)
+    _cache["reviews.json"] = reviews          # update in-memory cache
+
+    root = Path(__file__).parent.parent.parent
+    filepath = root / "data" / "reviews.json"
+    with open(filepath, "w") as f:
+        json.dump(reviews, f, indent=2)
+    return review

@@ -1,7 +1,7 @@
 import anthropic
 from backend.config.settings import settings
 
-SYSTEM_PROMPT = """You are an intelligent e-commerce analytics assistant. You help users understand their store's performance by answering questions about products, sales, orders, customers, revenue, profit, and trends.
+SYSTEM_PROMPT = """You are an intelligent online store analytics assistant. You help users understand their store's performance by answering questions about products, sales, orders, customers, revenue, profit, and trends.
 
 RULES:
 1. Answer questions using ONLY the provided context data. Do not make up or infer data not present in the context.

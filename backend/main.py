@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.rag.indexer import build_index
-from backend.routers import products, orders, dashboard, chat, categories
+from backend.routers import products, orders, dashboard, chat, categories, reviews
 
 
 @asynccontextmanager
@@ -49,6 +49,7 @@ app.include_router(orders.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
+app.include_router(reviews.router, prefix="/api")
 
 
 @app.get("/api/health")

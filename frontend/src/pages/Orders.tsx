@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Filter } from "lucide-react";
-import { getOrders } from "../services/api";
-import type { Order } from "../types";
+import { Filter, Star, AlertTriangle } from "lucide-react";
+import { getOrders, getProductReviews } from "../services/api";
+import type { Order, Review } from "../types";
 
 const statusColors: Record<string, string> = {
   completed: "bg-emerald-100 text-emerald-700",
@@ -12,12 +12,28 @@ const statusColors: Record<string, string> = {
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
+  // Map of order_id → reviews for that order's products
+  const [reviewMap, setReviewMap] = useState<Record<number, Review[]>>({});
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getOrders(200)
-      .then(setOrders)
+      .then(async (data) => {
+        setOrders(data);
+        // Fetch reviews for every unique product across all orders
+        const productIds = [...new Set(data.flatMap((o) => o.items.map((i) => i.product_id)))];
+        const allReviews = (
+          await Promise.all(productIds.map((pid) => getProductReviews(pid).catch(() => [])))
+        ).flat();
+        // Group by order_id
+        const map: Record<number, Review[]> = {};
+        for (const r of allReviews) {
+          if (!map[r.order_id]) map[r.order_id] = [];
+          map[r.order_id].push(r);
+        }
+        setReviewMap(map);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -87,6 +103,9 @@ export default function Orders() {
                 <th className="text-center py-3 px-4 text-gray-500 font-medium">
                   Status
                 </th>
+                <th className="text-center py-3 px-4 text-gray-500 font-medium">
+                  Feedback
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -129,6 +148,29 @@ export default function Orders() {
                     >
                       {order.status}
                     </span>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    {(() => {
+                      const revs = reviewMap[order.id] ?? [];
+                      const returns = revs.filter((r) => r.has_return_request);
+                      if (revs.length === 0) return <span className="text-xs text-gray-300">—</span>;
+                      const avgRating = revs.reduce((s, r) => s + r.rating, 0) / revs.length;
+                      return (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            {avgRating.toFixed(1)}
+                            <span className="text-gray-400">({revs.length})</span>
+                          </span>
+                          {returns.length > 0 && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">
+                              <AlertTriangle className="w-3 h-3" />
+                              {returns.length} return{returns.length > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

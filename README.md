@@ -1,6 +1,6 @@
 # ShopRAG — Single Agent RAG E-Commerce Analytics
 
-A full-stack **Retrieval-Augmented Generation (RAG)** application that consumes e-commerce data and answers natural language queries about sales, products, prices, profits, customers, and trends through an AI-powered chatbot.
+A full-stack **Retrieval-Augmented Generation (RAG)** application that consumes e-commerce data and answers natural language queries about sales, products, prices, profits, customers, trends, and **customer reviews & return reasons** through an AI-powered chatbot.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
@@ -15,7 +15,7 @@ A full-stack **Retrieval-Augmented Generation (RAG)** application that consumes 
 
 ShopRAG is a single-agent RAG system that:
 
-1. **Indexes** all e-commerce data (products, orders, customers, sales) into a FAISS vector store
+1. **Indexes** all e-commerce data (products, orders, customers, sales, and customer reviews) into a FAISS vector store
 2. **Retrieves** the most relevant data chunks using semantic similarity search
 3. **Generates** accurate, data-driven answers using Claude AI with the retrieved context
 
@@ -41,7 +41,8 @@ ShopRAG is a single-agent RAG system that:
 │                      BACKEND (FastAPI + Python)                 │
 │                                                                 │
 │  GET /api/products     GET /api/orders     GET /api/dashboard   │
-│  GET /api/categories              POST /api/chat ←── RAG here  │
+│  GET /api/categories   GET/POST /api/reviews                   │
+│                                   POST /api/chat ←── RAG here  │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                    RAG PIPELINE                         │   │
@@ -73,7 +74,7 @@ ShopRAG is a single-agent RAG system that:
 ### RAG Pipeline
 
 ```
-                    "What were the top products this week?"
+         "What are the top 3 return reasons in the last quarter?"
                                      │
                                      ▼
                          ┌─────────────────────┐
@@ -85,29 +86,30 @@ ShopRAG is a single-agent RAG system that:
                          ┌─────────────────────┐
                          │  FAISS Similarity   │
                          │  Search             │  ──▶  Top 10 relevant chunks
-                         └─────────────────────┘          from 213 total
+                         └─────────────────────┘          from 301 total
                                      │
-                     ┌───────────────┼────────────────┐
-                     ▼               ▼                ▼
-               order chunks    sales chunks    product chunks
+                ┌──────────────┬─────┴─────┬──────────────┐
+                ▼              ▼           ▼              ▼
+          order chunks   sales chunks  review chunks  review analytics
                                      │
                                      ▼
                          ┌─────────────────────┐
                          │  Claude API         │
-                         │  (context-grounded) │  ──▶  "Top 3 products were..."
+                         │  (context-grounded) │  ──▶  "#1 Wrong Size..."
                          └─────────────────────┘       + [source] citations
 ```
 
-### FAISS Index Composition (213 chunks at startup)
+### FAISS Index Composition (301 chunks at startup)
 
 ```
-  Products       ████████  40 chunks   (individual product details)
-  Orders         ███████████████████████  115 chunks  (order records)
-  Customers      █████  25 chunks      (customer profiles)
-  Sales Summary  ████  12 chunks       (monthly aggregations)
-  Pre-computed   ████  12 chunks       (top sellers, weekly breakdowns)
-  Categories     ██  8 chunks          (category aggregations)
-  Biz Summary    █  1 chunk            (overall business snapshot)
+  Orders           ███████████████████████  115 chunks  (individual order records)
+  Reviews          █████████████████  83 chunks   (individual customer reviews)
+  Products         ████████  40 chunks   (product details with margin/stock)
+  Customers        █████  25 chunks      (customer profiles and spend)
+  Sales Summary    ████  13 chunks       (12 monthly + 1 overall business summary)
+  Pre-computed     ████  12 chunks       (top sellers, weekly/daily breakdowns)
+  Review Analytics █  5 chunks           (return reasons, ratings, category returns)
+  Categories       ██  8 chunks          (category-level aggregations)
 ```
 
 ### Data Flow by Request Type
@@ -118,6 +120,9 @@ ShopRAG is a single-agent RAG system that:
 | Admin KPIs | `GET /api/dashboard/summary` → computed from all JSON → charts |
 | Ask chatbot | `POST /api/chat` → FAISS search → Claude → answer + sources |
 | Filter orders | `GET /api/orders?status=shipped` → filtered JSON → table |
+| View product reviews | `GET /api/reviews/?product_id=1` → reviews.json → reviews section |
+| Submit review | `POST /api/reviews/` → save to reviews.json → confirmation |
+| Return request | `POST /api/reviews/` with `has_return_request=true` → pending return |
 
 ---
 
@@ -126,15 +131,22 @@ ShopRAG is a single-agent RAG system that:
 ### Consumer Storefront (`/`)
 - **Homepage** — Hero banner, shop-by-category grid with real images, featured products, best value picks, and CTA banner
 - **Shop Page** (`/shop`) — Full product catalog with sidebar category filters, price range slider, sort options (featured, price, rating, name), and search
-- **Product Detail** (`/product/:id`) — Large product image, ratings, description, quantity selector, add-to-cart, related products
+- **Product Detail** (`/product/:id`) — Large product image, ratings, description, quantity selector, add-to-cart, customer reviews section, and "Write a Review" button
 - **Shopping Cart** (`/cart`) — Cart items with quantity controls, order summary with subtotal/shipping/tax calculation
 - **Product Images** — All 40 products have real photographs from Unsplash
 - **Responsive Navigation** — Sticky navbar with category links, search bar, and cart badge
 
+### Customer Reviews & Feedback
+- **Review Submission Modal** — Star rating (1–5 with hover labels), review title and free-text, accessible from every product detail page
+- **Return Request Flow** — Toggle inside the review modal to file a return; customer selects from 7 standardized return reasons and adds optional details
+- **Return Reasons** — Wrong Size / Poor Fit · Product Quality Issue · Item Not as Described · Arrived Damaged · Changed My Mind · Better Price Found Elsewhere · Missing Parts / Accessories
+- **Return Status Tracking** — Each return request has a `pending / approved / rejected` status badge displayed inline with the review
+- **Reviews Persist** — New reviews are written to `data/reviews.json` and immediately served by the API
+
 ### Admin Dashboard (`/admin`)
 - **Dashboard** — KPI cards (revenue, profit, orders, avg order value), revenue/profit trend charts, category breakdown, top products table
 - **Products Management** — 40 products across 8 categories with search and category filtering, showing price, cost, margin, rating, and stock
-- **Orders Management** — 108 orders with status filtering (completed, processing, shipped, cancelled), sortable by date
+- **Orders Management** — 115 orders with status filtering (completed, processing, shipped, cancelled); each row shows a **Feedback column** with avg star rating and return request count
 
 ### RAG Chatbot (available on all pages)
 - **Floating chat widget** accessible from any page (store or admin)
@@ -144,6 +156,7 @@ ShopRAG is a single-agent RAG system that:
 - **Suggested questions** for quick start
 - **Typing indicators** and smooth animations
 - **Real-time weekly/daily analytics** — pre-computed chunks ensure accurate answers for "sales this week" and "sales today"
+- **Review & return analytics** — answers questions about customer sentiment, return reasons, and product feedback trends
 
 ### Sample Questions You Can Ask
 - "What was the total revenue last quarter?"
@@ -156,6 +169,11 @@ ShopRAG is a single-agent RAG system that:
 - "Compare today's sales vs yesterday"
 - "Compare Electronics vs Clothing performance"
 - "What is the average order value?"
+- "What are the top 3 reasons customers are returning products in the last quarter?"
+- "Which product category has the highest return rate?"
+- "What do customers say about the Athletic Running Shoes?"
+- "How many return requests were filed in Q1 2026?"
+- "Which products have the most negative reviews?"
 
 ---
 
@@ -194,9 +212,10 @@ single-agent-rag-application/
 │   │   ├── categories.py             # GET /api/categories
 │   │   ├── orders.py                 # GET /api/orders
 │   │   ├── dashboard.py              # GET /api/dashboard/summary
-│   │   └── chat.py                   # POST /api/chat
+│   │   ├── chat.py                   # POST /api/chat
+│   │   └── reviews.py                # GET/POST /api/reviews, GET analytics
 │   ├── rag/
-│   │   ├── indexer.py                # Data → text chunks → FAISS index
+│   │   ├── indexer.py                # Data → text chunks → FAISS index (incl. reviews)
 │   │   ├── retriever.py              # Query embedding → similarity search
 │   │   ├── generator.py              # Prompt construction → Claude API
 │   │   └── engine.py                 # RAG orchestrator
@@ -222,6 +241,7 @@ single-agent-rag-application/
 │   │   │   ├── Chatbot.tsx           # Floating RAG chat widget
 │   │   │   ├── ChatMessage.tsx       # Message bubbles with citations
 │   │   │   ├── ChatInput.tsx         # Chat input with send button
+│   │   │   ├── ReviewModal.tsx       # Review submission modal (rating + return request)
 │   │   │   ├── Sidebar.tsx           # Admin navigation sidebar
 │   │   │   ├── KPICard.tsx           # Dashboard stat cards
 │   │   │   ├── ProductCard.tsx       # Admin product display cards
@@ -242,7 +262,8 @@ single-agent-rag-application/
 │   ├── categories.json               # 8 categories
 │   ├── orders.json                   # 115 orders
 │   ├── customers.json                # 25 customers
-│   └── sales_summary.json           # 12 months of aggregated sales
+│   ├── sales_summary.json           # 12 months of aggregated sales
+│   └── reviews.json                  # 83 customer reviews with return requests
 │
 ├── .env                              # API keys (not committed)
 ├── .gitignore
@@ -263,7 +284,7 @@ single-agent-rag-application/
 ### 1. Clone & Setup
 
 ```bash
-cd "AskMyStore"
+cd "single agent rag application"
 ```
 
 ### 2. Configure API Key
@@ -324,6 +345,10 @@ cd frontend && npm run dev
 | `GET` | `/api/orders/stats` | Order statistics |
 | `GET` | `/api/dashboard/summary` | Full dashboard KPIs, charts, top products |
 | `POST` | `/api/chat/` | RAG chat — send `{"query": "..."}`, get AI answer |
+| `GET` | `/api/reviews/` | List reviews (optional `?product_id=N` or `?order_id=N`) |
+| `GET` | `/api/reviews/{id}` | Get single review by ID |
+| `POST` | `/api/reviews/` | Submit a new review (with optional return request) |
+| `GET` | `/api/reviews/analytics/summary` | Return reason stats, Q1 breakdown, category return rates |
 
 ### Frontend Routes
 
@@ -344,7 +369,7 @@ cd frontend && npm run dev
 
 ### Data Indexing (on startup)
 
-The indexer converts all structured JSON data into **213 natural language text chunks**:
+The indexer converts all structured JSON data into **301 natural language text chunks**:
 
 | Data Source | Chunks | Example |
 |-------------|--------|---------|
@@ -355,6 +380,8 @@ The indexer converts all structured JSON data into **213 natural language text c
 | Sales Summaries (12) | 12 | *"Monthly Sales for April 2025: Revenue $4,540.83. Profit $2,055.36. Order count: 8."* |
 | Overall Summary | 1 | *"Overall Business Summary (Apr 2025 - Mar 2026): Total revenue $60,987.73..."* |
 | Pre-computed Analytics | 12 | *"Top 10 Best-Selling Products by Quantity...", "Weekly Sales Breakdown...", "Daily Sales..."* |
+| Customer Reviews (83) | 83 | *"Review by Alice Johnson on 2026-01-22: Product: Classic Denim Jacket. Rating: 2/5. RETURN REQUEST: Wrong Size / Poor Fit..."* |
+| Review Analytics | 5 | *"Q1 2026 Return Reasons: #1 Wrong Size/Poor Fit (6), #2 Product Quality Issue (3), #3 Item Not as Described (3)..."* |
 
 All chunks are embedded using **SentenceTransformer (all-MiniLM-L6-v2)** into 384-dimensional vectors and stored in a **FAISS IndexFlatIP** (inner product) index.
 
@@ -383,6 +410,11 @@ All chunks are embedded using **SentenceTransformer (all-MiniLM-L6-v2)** into 38
 | Total Revenue | ~$46,700 |
 | Total Profit | ~$21,700 |
 | Avg Order Value | ~$497 |
+| Total Reviews | 83 |
+| Total Return Requests | 18 |
+| Overall Return Rate | ~21.7% |
+| Q1 2026 Return Requests | 13 |
+| Top Return Reason (Q1) | Wrong Size / Poor Fit (6 cases) |
 
 ---
 
@@ -432,9 +464,13 @@ A question like "top 5 selling products" needs data from **all 115 orders**. But
 - *"This week's orders: 7 orders, $3,916.87 revenue..."*
 - *"Today's sales: 2 orders, $1,373.96..."*
 
+The same applies to **review analytics**. A question like "top 3 return reasons last quarter" would need to scan all 83 reviews and aggregate by time period and reason. Instead, a dedicated chunk pre-computes this at startup:
+
+- *"Q1 2026 Return Reasons: #1 Wrong Size/Poor Fit (6 returns), #2 Product Quality Issue (3), #3 Item Not as Described (3). Affected products: Classic Denim Jacket, Athletic Running Shoes, Slim Fit Chinos..."*
+
 These summaries become their own cards, so **one card = one complete answer**.
 
-### Tech Stack
+### Tech Stack in Plain English
 
 | What | Tool | Why |
 |------|------|-----|
@@ -443,7 +479,7 @@ These summaries become their own cards, so **one card = one complete answer**.
 | Turning text → numbers | SentenceTransformers | So we can compare text mathematically |
 | Finding similar cards | FAISS | Super fast similarity search by Facebook |
 | Writing answers | Claude AI | Understands context and writes human-like responses |
-| Data | JSON files | Simple files storing products, orders, customers |
+| Data | JSON files | Simple files storing products, orders, customers, reviews |
 
 ---
 
