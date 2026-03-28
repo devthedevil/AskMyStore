@@ -381,7 +381,7 @@ A question like "top 5 selling products" needs data from **all 115 orders**. But
 
 These summaries become their own cards, so **one card = one complete answer**.
 
-### Tech Stack in Plain English
+### Tech Stack
 
 | What | Tool | Why |
 |------|------|-----|
