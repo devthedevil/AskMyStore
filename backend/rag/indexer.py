@@ -1,7 +1,7 @@
 import numpy as np
-import faiss
 from collections import defaultdict
-from fastembed import TextEmbedding
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import normalize
 from backend.services.data_loader import (
     get_products, get_categories, get_orders, get_customers, get_sales_summary,
     get_reviews, get_category_name, get_customer_name, get_product_name
@@ -733,19 +733,11 @@ def build_index() -> tuple:
 
     print(f"Created {len(all_chunks)} text chunks")
 
-    # Load embedding model
-    print(f"Loading embedding model: {settings.embedding_model}")
-    model = TextEmbedding(settings.embedding_model)
-
-    # Embed all chunks
     texts = [chunk["text"] for chunk in all_chunks]
-    print("Encoding chunks...")
-    embeddings = np.array(list(model.embed(texts)), dtype="float32")
+    print("Building TF-IDF index...")
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_features=50000, sublinear_tf=True)
+    tfidf_matrix = vectorizer.fit_transform(texts)
+    index = normalize(tfidf_matrix, norm="l2").toarray().astype("float32")
 
-    # Build FAISS index (Inner Product for normalized vectors)
-    dimension = embeddings.shape[1]
-    index = faiss.IndexFlatIP(dimension)
-    index.add(embeddings)
-
-    print(f"FAISS index built with {index.ntotal} vectors of dimension {dimension}")
-    return index, all_chunks, model
+    print(f"TF-IDF index built: {index.shape[0]} chunks × {index.shape[1]} features")
+    return index, all_chunks, vectorizer
