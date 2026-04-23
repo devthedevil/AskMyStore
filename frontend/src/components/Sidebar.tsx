@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
-  Bot,
   Store,
   ExternalLink,
 } from "lucide-react";
