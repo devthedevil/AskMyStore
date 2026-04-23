@@ -1,5 +1,5 @@
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 from backend.config.settings import settings
 
 
@@ -7,7 +7,7 @@ def retrieve(
     query: str,
     index,
     metadata: list[dict],
-    model: SentenceTransformer,
+    model: TextEmbedding,
     top_k: int = None
 ) -> list[dict]:
     """Retrieve the top-k most relevant chunks for a given query."""
@@ -15,8 +15,7 @@ def retrieve(
         top_k = settings.top_k
 
     # Encode the query
-    query_embedding = model.encode([query], normalize_embeddings=True)
-    query_embedding = np.array(query_embedding, dtype="float32")
+    query_embedding = np.array(list(model.embed([query])), dtype="float32")
 
     # Search FAISS index
     scores, indices = index.search(query_embedding, top_k)
