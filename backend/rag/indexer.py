@@ -4,7 +4,7 @@ from collections import defaultdict
 from sentence_transformers import SentenceTransformer
 from backend.services.data_loader import (
     get_products, get_categories, get_orders, get_customers, get_sales_summary,
-    get_category_name, get_customer_name, get_product_name
+    get_reviews, get_category_name, get_customer_name, get_product_name
 )
 from backend.config.settings import settings
 
@@ -497,15 +497,228 @@ def _build_analytics_chunks(products: list[dict], orders: list[dict], customers:
     return chunks
 
 
+def _build_review_chunks(reviews: list[dict], products: list[dict]) -> list[dict]:
+    """One chunk per review — captures sentiment, rating, and return context."""
+    chunks = []
+    product_map = {p["id"]: p for p in products}
+    for r in reviews:
+        pid = r["product_id"]
+        product_name = get_product_name(pid)
+        cat_name = get_category_name(product_map[pid]["category_id"]) if pid in product_map else "Unknown"
+        customer_name = get_customer_name(r["customer_id"])
+        stars = "★" * r["rating"] + "☆" * (5 - r["rating"])
+
+        text = (
+            f"Customer Review by {customer_name} on {r['review_date']}: "
+            f"Product reviewed: {product_name} (Category: {cat_name}). "
+            f"Order #{r['order_id']}. "
+            f"Rating: {r['rating']}/5 {stars}. "
+            f"Title: \"{r['title']}\". "
+            f"Review: {r['review_text']} "
+        )
+        if r.get("has_return_request"):
+            text += (
+                f"RETURN REQUEST: Yes. "
+                f"Return reason: {r['return_reason']}. "
+                f"Details: {r.get('return_reason_details', '')}. "
+                f"Return status: {r.get('return_status', 'pending')}."
+            )
+        else:
+            text += "Return request: None."
+
+        chunks.append({
+            "text": text,
+            "source_type": "review",
+            "source_id": f"review-{r['id']}",
+            "source_name": f"Review of {product_name} by {customer_name}"
+        })
+    return chunks
+
+
+def _build_review_analytics_chunks(reviews: list[dict], products: list[dict]) -> list[dict]:
+    """Pre-computed review analytics — return reasons, ratings, product feedback summaries."""
+    from collections import defaultdict
+    from datetime import datetime
+
+    chunks = []
+    product_map = {p["id"]: p for p in products}
+    returns = [r for r in reviews if r.get("has_return_request")]
+
+    # ── All-time return reasons ──
+    all_reason_counts: dict[str, int] = defaultdict(int)
+    for r in returns:
+        if r.get("return_reason"):
+            all_reason_counts[r["return_reason"]] += 1
+
+    reason_lines = [
+        f"#{i+1}. {reason}: {count} return request(s)"
+        for i, (reason, count) in enumerate(
+            sorted(all_reason_counts.items(), key=lambda x: x[1], reverse=True)
+        )
+    ]
+    text = (
+        f"All-Time Return Reasons Summary (based on customer reviews): "
+        f"Total reviews: {len(reviews)}. "
+        f"Total return requests: {len(returns)} "
+        f"({round(len(returns)/len(reviews)*100, 1) if reviews else 0}% return rate). "
+        f"Return reasons ranked: " + ". ".join(reason_lines) + "."
+    )
+    chunks.append({
+        "text": text,
+        "source_type": "review_analytics",
+        "source_id": "all-time-return-reasons",
+        "source_name": "All-Time Return Reasons"
+    })
+
+    # ── Q1 2026 (last quarter) return reasons ──
+    q1_start = datetime(2026, 1, 1)
+    q1_end   = datetime(2026, 3, 31)
+    q1_reviews = [
+        r for r in reviews
+        if q1_start <= datetime.strptime(r["review_date"], "%Y-%m-%d") <= q1_end
+    ]
+    q1_returns = [r for r in q1_reviews if r.get("has_return_request")]
+
+    q1_reason_counts: dict[str, int] = defaultdict(int)
+    q1_reason_products: dict[str, list[str]] = defaultdict(list)
+    for r in q1_returns:
+        reason = r.get("return_reason", "Unknown")
+        q1_reason_counts[reason] += 1
+        q1_reason_products[reason].append(get_product_name(r["product_id"]))
+
+    q1_lines = []
+    for i, (reason, count) in enumerate(
+        sorted(q1_reason_counts.items(), key=lambda x: x[1], reverse=True)
+    ):
+        products_list = ", ".join(q1_reason_products[reason])
+        q1_lines.append(
+            f"#{i+1}. {reason}: {count} return request(s). "
+            f"Affected products: {products_list}"
+        )
+
+    q1_avg_rating = round(
+        sum(r["rating"] for r in q1_reviews) / len(q1_reviews), 2
+    ) if q1_reviews else 0
+
+    text = (
+        f"Q1 2026 (January–March 2026) Return Reasons Analysis based on customer reviews: "
+        f"Total reviews submitted in Q1 2026: {len(q1_reviews)}. "
+        f"Total return requests in Q1 2026: {len(q1_returns)} "
+        f"({round(len(q1_returns)/len(q1_reviews)*100, 1) if q1_reviews else 0}% return rate). "
+        f"Average rating in Q1 2026: {q1_avg_rating}/5. "
+        f"Top return reasons in Q1 2026 ranked by frequency: " + ". ".join(q1_lines) + ". "
+        f"Summary: The top 3 reasons customers returned products in Q1 2026 were: "
+        f"(1) {list(sorted(q1_reason_counts, key=lambda x: q1_reason_counts[x], reverse=True))[0] if q1_reason_counts else 'N/A'}, "
+        f"(2) {list(sorted(q1_reason_counts, key=lambda x: q1_reason_counts[x], reverse=True))[1] if len(q1_reason_counts) > 1 else 'N/A'}, "
+        f"(3) {list(sorted(q1_reason_counts, key=lambda x: q1_reason_counts[x], reverse=True))[2] if len(q1_reason_counts) > 2 else 'N/A'}."
+    )
+    chunks.append({
+        "text": text,
+        "source_type": "review_analytics",
+        "source_id": "q1-2026-return-reasons",
+        "source_name": "Q1 2026 Return Reasons (Last Quarter)"
+    })
+
+    # ── Return rate by product category ──
+    cat_review_counts: dict[str, int] = defaultdict(int)
+    cat_return_counts: dict[str, int] = defaultdict(int)
+    cat_return_reasons: dict[str, list[str]] = defaultdict(list)
+    for r in reviews:
+        pid = r["product_id"]
+        cat = get_category_name(product_map[pid]["category_id"]) if pid in product_map else "Unknown"
+        cat_review_counts[cat] += 1
+        if r.get("has_return_request") and r.get("return_reason"):
+            cat_return_counts[cat] += 1
+            cat_return_reasons[cat].append(r["return_reason"])
+
+    cat_lines = []
+    for cat in sorted(cat_return_counts, key=lambda x: cat_return_counts[x], reverse=True):
+        rate = round(cat_return_counts[cat] / cat_review_counts[cat] * 100, 1)
+        top_reason = max(set(cat_return_reasons[cat]), key=cat_return_reasons[cat].count)
+        cat_lines.append(
+            f"{cat}: {cat_return_counts[cat]} returns from {cat_review_counts[cat]} reviews "
+            f"({rate}% return rate). Top reason: {top_reason}"
+        )
+
+    text = (
+        "Return Rate by Product Category (based on customer reviews): "
+        + ". ".join(cat_lines) + "."
+    )
+    chunks.append({
+        "text": text,
+        "source_type": "review_analytics",
+        "source_id": "return-rate-by-category",
+        "source_name": "Return Rate by Category"
+    })
+
+    # ── Average ratings by product ──
+    product_ratings: dict[int, list[int]] = defaultdict(list)
+    product_return_counts: dict[int, int] = defaultdict(int)
+    for r in reviews:
+        product_ratings[r["product_id"]].append(r["rating"])
+        if r.get("has_return_request"):
+            product_return_counts[r["product_id"]] += 1
+
+    rated_products = sorted(
+        product_ratings.items(),
+        key=lambda x: sum(x[1]) / len(x[1]),
+        reverse=True
+    )
+    prod_lines = []
+    for pid, ratings in rated_products:
+        avg = round(sum(ratings) / len(ratings), 2)
+        returns_count = product_return_counts[pid]
+        prod_lines.append(
+            f"{get_product_name(pid)}: avg {avg}/5 from {len(ratings)} review(s), "
+            f"{returns_count} return request(s)"
+        )
+
+    text = (
+        "Product Ratings and Return Counts from Customer Reviews "
+        "(sorted by average rating, highest first): "
+        + ". ".join(prod_lines) + "."
+    )
+    chunks.append({
+        "text": text,
+        "source_type": "review_analytics",
+        "source_id": "product-ratings-summary",
+        "source_name": "Product Ratings & Return Counts"
+    })
+
+    # ── Detailed return requests list (all) ──
+    return_detail_lines = []
+    for r in sorted(returns, key=lambda x: x["review_date"], reverse=True):
+        customer_name = get_customer_name(r["customer_id"])
+        product_name  = get_product_name(r["product_id"])
+        return_detail_lines.append(
+            f"Order #{r['order_id']} ({r['review_date']}) — {customer_name} returned "
+            f"{product_name}: reason={r['return_reason']}, status={r.get('return_status','pending')}"
+        )
+
+    text = (
+        f"All Return Requests Detail (from customer reviews, {len(returns)} total): "
+        + ". ".join(return_detail_lines) + "."
+    )
+    chunks.append({
+        "text": text,
+        "source_type": "review_analytics",
+        "source_id": "all-return-requests",
+        "source_name": "All Return Requests"
+    })
+
+    return chunks
+
+
 def build_index() -> tuple:
     """Build FAISS index from all e-commerce data. Returns (index, metadata, model)."""
     print("Loading data and building RAG index...")
 
-    products = get_products()
+    products   = get_products()
     categories = get_categories()
-    orders = get_orders()
-    customers = get_customers()
-    sales = get_sales_summary()
+    orders     = get_orders()
+    customers  = get_customers()
+    sales      = get_sales_summary()
+    reviews    = get_reviews()
 
     # Build all text chunks
     all_chunks = []
@@ -515,6 +728,8 @@ def build_index() -> tuple:
     all_chunks.extend(_build_sales_chunks(sales))
     all_chunks.extend(_build_customer_chunks(customers, orders))
     all_chunks.extend(_build_analytics_chunks(products, orders, customers))
+    all_chunks.extend(_build_review_chunks(reviews, products))
+    all_chunks.extend(_build_review_analytics_chunks(reviews, products))
 
     print(f"Created {len(all_chunks)} text chunks")
 

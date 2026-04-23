@@ -10,16 +10,21 @@ import {
   RotateCcw,
   Check,
   Package,
+  MessageSquarePlus,
+  AlertTriangle,
 } from "lucide-react";
-import { getProduct, getProducts } from "../services/api";
+import { getProduct, getProducts, getProductReviews } from "../services/api";
 import { useCart } from "../hooks/useCart";
 import StoreProductCard from "../components/StoreProductCard";
-import type { Product } from "../types";
+import ReviewModal from "../components/ReviewModal";
+import type { Product, Review } from "../types";
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -33,8 +38,8 @@ export default function ProductDetail() {
     setQuantity(1);
     setAdded(false);
 
-    Promise.all([getProduct(Number(id)), getProducts()])
-      .then(([prod, all]) => {
+    Promise.all([getProduct(Number(id)), getProducts(), getProductReviews(Number(id))])
+      .then(([prod, all, revs]) => {
         setProduct(prod);
         setRelated(
           all
@@ -44,6 +49,7 @@ export default function ProductDetail() {
             )
             .slice(0, 4)
         );
+        setReviews(revs);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -233,6 +239,90 @@ export default function ProductDetail() {
         </div>
       </div>
 
+      {/* ── Customer Reviews ── */}
+      <section className="mt-16">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Customer Reviews</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {reviews.length} verified review{reviews.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowReviewModal(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+          >
+            <MessageSquarePlus className="w-4 h-4" />
+            Write a Review
+          </button>
+        </div>
+
+        {reviews.length === 0 ? (
+          <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-100">
+            <MessageSquarePlus className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No reviews yet — be the first to share your thoughts!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {reviews.slice(0, 6).map((review) => (
+              <div
+                key={review.id}
+                className="bg-white border border-gray-100 rounded-2xl p-5"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    {/* Stars + title */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-4 h-4 ${
+                              s <= review.rating
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-gray-200 fill-gray-200"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="font-semibold text-gray-900 text-sm">
+                        {review.title}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {review.review_text}
+                    </p>
+                    {/* Return badge */}
+                    {review.has_return_request && (
+                      <div className="mt-3 inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium px-3 py-1 rounded-full">
+                        <AlertTriangle className="w-3 h-3" />
+                        Return requested · {review.return_reason}
+                        {review.return_status && (
+                          <span className={`ml-1 capitalize font-semibold ${
+                            review.return_status === "approved" ? "text-emerald-600" :
+                            review.return_status === "rejected" ? "text-rose-600" :
+                            "text-amber-600"
+                          }`}>
+                            ({review.return_status})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">
+                    {new Date(review.review_date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* Related Products */}
       {related.length > 0 && (
         <section className="mt-20">
@@ -245,6 +335,17 @@ export default function ProductDetail() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && product && (
+        <ReviewModal
+          product={product}
+          onClose={() => setShowReviewModal(false)}
+          onSubmitted={() =>
+            getProductReviews(product.id).then(setReviews)
+          }
+        />
       )}
     </div>
   );

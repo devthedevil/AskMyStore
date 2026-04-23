@@ -24,3 +24,4 @@ frontend/dist/
 
 # Model cache
 *.faiss
+.vercel

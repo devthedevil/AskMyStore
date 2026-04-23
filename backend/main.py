@@ -1,14 +1,14 @@
+import os
 import sys
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-# Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.rag.indexer import build_index
-from backend.routers import products, orders, dashboard, chat, categories
+from backend.routers import products, orders, dashboard, chat, categories, reviews, export
 
 
 @asynccontextmanager
@@ -34,10 +34,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS - allow frontend
+_default_origins = "http://localhost:5173,http://127.0.0.1:5173"
+_cors_origins = os.getenv("CORS_ORIGINS", _default_origins).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,6 +51,8 @@ app.include_router(orders.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
+app.include_router(reviews.router, prefix="/api")
+app.include_router(export.router, prefix="/api")
 
 
 @app.get("/api/health")

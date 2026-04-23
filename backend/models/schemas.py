@@ -2,6 +2,33 @@ from pydantic import BaseModel
 from typing import Optional
 
 
+class ReviewCreate(BaseModel):
+    order_id: int
+    customer_id: int
+    product_id: int
+    rating: int                        # 1–5
+    title: str
+    review_text: str
+    has_return_request: bool = False
+    return_reason: Optional[str] = None
+    return_reason_details: Optional[str] = None
+
+
+class Review(BaseModel):
+    id: int
+    order_id: int
+    customer_id: int
+    product_id: int
+    rating: int
+    title: str
+    review_text: str
+    review_date: str
+    has_return_request: bool
+    return_reason: Optional[str]
+    return_reason_details: Optional[str]
+    return_status: Optional[str]
+
+
 class ChatRequest(BaseModel):
     query: str
 

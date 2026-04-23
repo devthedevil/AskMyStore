@@ -92,3 +92,42 @@ export interface Category {
   name: string;
   description: string;
 }
+
+export const RETURN_REASONS = [
+  "Wrong Size / Poor Fit",
+  "Product Quality Issue",
+  "Item Not as Described",
+  "Arrived Damaged",
+  "Changed My Mind",
+  "Better Price Found Elsewhere",
+  "Missing Parts / Accessories",
+] as const;
+
+export type ReturnReason = typeof RETURN_REASONS[number];
+
+export interface Review {
+  id: number;
+  order_id: number;
+  customer_id: number;
+  product_id: number;
+  rating: number;
+  title: string;
+  review_text: string;
+  review_date: string;
+  has_return_request: boolean;
+  return_reason: ReturnReason | null;
+  return_reason_details: string | null;
+  return_status: "pending" | "approved" | "rejected" | null;
+}
+
+export interface ReviewCreate {
+  order_id: number;
+  customer_id: number;
+  product_id: number;
+  rating: number;
+  title: string;
+  review_text: string;
+  has_return_request: boolean;
+  return_reason: ReturnReason | null;
+  return_reason_details: string | null;
+}
