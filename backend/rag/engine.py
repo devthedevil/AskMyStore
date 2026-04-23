@@ -1,4 +1,4 @@
-from sentence_transformers import SentenceTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from backend.rag.retriever import retrieve
 from backend.rag.generator import generate
 from backend.models.schemas import ChatResponse
@@ -8,7 +8,7 @@ def answer_query(
     query: str,
     index,
     metadata: list[dict],
-    model: SentenceTransformer
+    model: TfidfVectorizer
 ) -> ChatResponse:
     """Full RAG pipeline: retrieve relevant chunks, then generate an answer."""
 
