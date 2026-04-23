@@ -1,4 +1,4 @@
-import { Store, Bot } from "lucide-react";
+import { Store } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Footer() {
@@ -17,14 +17,9 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-gray-400 max-w-md leading-relaxed">
-              An AI-powered e-commerce platform with a built-in RAG assistant.
-              Ask questions about products, sales, revenue, and trends using
-              natural language.
+              Your smart shopping destination. Discover products across 8
+              categories and get instant answers from our AI assistant.
             </p>
-            <div className="flex items-center gap-2 mt-4 text-xs text-gray-500">
-              <Bot className="w-4 h-4 text-indigo-400" />
-              <span>Powered by FAISS Vector Search & Claude AI</span>
-            </div>
           </div>
 
           {/* Shop */}
@@ -50,7 +45,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-10 pt-6 text-center text-xs text-gray-500">
-          AskMyStore &mdash; Single Agent RAG E-Commerce Application &mdash; Built with FastAPI, React, FAISS & Claude AI
+          &copy; {new Date().getFullYear()} AskMyStore. All rights reserved.
         </div>
       </div>
     </footer>

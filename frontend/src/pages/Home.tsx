@@ -37,7 +37,7 @@ const PERKS = [
   { icon: Truck, title: "Free Shipping", desc: "On orders over $50" },
   { icon: Shield, title: "Secure Payment", desc: "100% secure checkout" },
   { icon: RotateCcw, title: "Easy Returns", desc: "30-day return policy" },
-  { icon: Headphones, title: "AI Support", desc: "24/7 RAG assistant" },
+  { icon: Headphones, title: "AI Support", desc: "24/7 AI assistant" },
 ];
 
 export default function Home() {
