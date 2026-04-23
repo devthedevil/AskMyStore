@@ -8,6 +8,7 @@ import {
   Headphones,
   Star,
   Sparkles,
+  LayoutDashboard,
 } from "lucide-react";
 import StoreProductCard from "../components/StoreProductCard";
 import { getProducts } from "../services/api";
@@ -87,6 +88,13 @@ export default function Home() {
               >
                 Shop Now
                 <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-2 bg-white/15 text-white px-6 py-3 rounded-full font-semibold hover:bg-white/25 transition-colors backdrop-blur-sm border border-white/30"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Admin Dashboard
               </Link>
             </div>
           </div>
