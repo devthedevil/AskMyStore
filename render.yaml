@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: askmystore-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://askmystore.vercel.app,http://localhost:5173
