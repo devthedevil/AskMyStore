@@ -483,6 +483,4 @@ These summaries become their own cards, so **one card = one complete answer**.
 
 ---
 
-## License
 
-This project is for educational and portfolio purposes.
