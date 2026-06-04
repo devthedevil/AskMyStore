@@ -488,7 +488,3 @@ These summaries become their own cards, so **one card = one complete answer**.
 | Data | JSON files | Simple files storing products, orders, customers, reviews |
 
 ---
-
-## License
-
-This project is for educational and portfolio purposes.
