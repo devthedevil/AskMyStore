@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://askmystore-api.onrender.com/api/$1"
+      "destination": "https://askmystore.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",
